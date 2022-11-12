@@ -1,5 +1,6 @@
 // 引用android api
 import Context from "android.content.Context"
+import Intent from "android.content.Intent"
 import Activity from "android.app.Activity"
 
 // 引用uts环境库
@@ -11,8 +12,57 @@ import MPScanCallbackAdapter from "com.alipay.android.phone.scancode.export.adap
 import MPScanResult from "com.alipay.android.phone.scancode.export.adapter.MPScanResult"
 import MPScanStarter from "com.alipay.android.phone.scancode.export.adapter.MPScanStarter"
 import MPScanError from "com.alipay.android.phone.scancode.export.adapter.MPScanError"
+import ScanCallback from "com.alipay.android.phone.scancode.export.ScanCallback"
 
-class MyScanCallback extends MPScanCallbackAdapter {
+const recognizeTypeNames = [
+	'QR_CODE',
+	'BAR_CODE',
+	'DM_CODE',
+	'PDF417_CODE',
+]
+
+const recognizeTypeValues = [
+	ScanRequest.RecognizeType.QR_CODE,
+	ScanRequest.RecognizeType.BAR_CODE,
+	ScanRequest.RecognizeType.DM_CODE,
+	ScanRequest.RecognizeType.PDF417_Code,
+]
+
+function parseRecognizeTypes(types?: string): ScanRequest.RecognizeType[] {
+	const args:ScanRequest.RecognizeType[] = []
+	types?.replace(/[^0-9a-zA-Z_]/, ',')
+		?.split(',')
+		?.filter((str:string):boolean => {
+			const idx = recognizeTypeNames.indexOf(str)
+			if (idx >= 0) {
+				args.push(recognizeTypeValues[idx])
+			}
+			return false
+		})
+	return args
+}
+
+type ScanParams = {
+	// 共用参数
+	viewText?: string
+	recognizeTypes?: string
+	hideAlbum: boolean
+	openTorchText?: string
+	closeTorchText?: string
+
+	// 仅 startScanFullScreen 用的参数
+	onScanFinish?: (type:string, text:string) => boolean
+	onScanCancel?: () => void
+	onScanError?: (err:string) => void
+
+	// 仅 startScan 用的参数
+	scanType?: string
+	titleText?: string
+	translucentStatusBar: boolean
+	onScanResult?: (data:string) => void
+}
+
+class MyMPScanCallback extends MPScanCallbackAdapter {
 	params: ScanParams
 
 	constructor(params: ScanParams) {
@@ -48,49 +98,13 @@ class MyScanCallback extends MPScanCallbackAdapter {
 	}
 }
 
-type ScanParams = {
-	viewText?: string
-	recognizeTypes?: string
-	hideAlbum: boolean
-	openTorchText?: string
-	closeTorchText?: string
-	onScanFinish?: (type:string, text:string) => boolean
-	onScanCancel?: () => void
-	onScanError?: (err:string) => void
-}
-
-const recognizeTypeNames = [
-	'QR_CODE',
-	'BAR_CODE',
-	'DM_CODE',
-	'PDF417_CODE',
-]
-const recognizeTypeValues = [
-	ScanRequest.RecognizeType.QR_CODE,
-	ScanRequest.RecognizeType.BAR_CODE,
-	ScanRequest.RecognizeType.DM_CODE,
-	ScanRequest.RecognizeType.PDF417_Code,
-]
-
 export function startScanFullScreen(params: ScanParams) {
 	let scanRequest = new ScanRequest()
 
 	if (params.viewText != null) scanRequest.setViewText(params.viewText)
 
 	if (params.recognizeTypes != null) {
-		// 设法得到一个 Array<ScanRequest.RecognizeType> 类型的空数组
-		const args = [ScanRequest.RecognizeType.QR_CODE]
-		args.pop()
-		params.recognizeTypes
-			?.replace(/[^0-9a-zA-Z_]/, ',')
-			?.split(',')
-			?.filter((str:string):boolean => {
-				const idx = recognizeTypeNames.indexOf(str)
-				if (idx >= 0) {
-					args.push(recognizeTypeValues[idx])
-				}
-				return false
-			})
+		const args = parseRecognizeTypes(params.recognizeTypes)
 
 		// 设法调用具有可变参数的原生接口
 		switch (args.length) {
@@ -105,28 +119,85 @@ export function startScanFullScreen(params: ScanParams) {
 		}
 	}
 
-	if (params.hideAlbum != null) scanRequest.setNotSupportAlbum(params.hideAlbum)
+	// if (params.hideAlbum != null)
+	scanRequest.setNotSupportAlbum(params.hideAlbum)
 
 	if (params.openTorchText != null) scanRequest.setOpenTorchText(params.openTorchText)
 
 	if (params.closeTorchText != null) scanRequest.setCloseTorchText(params.closeTorchText)
 
-	let callback = new MyScanCallback(params)
+	let callback = new MyMPScanCallback(params)
 	MPScan.startMPaasScanFullScreenActivity(getUniActivity(), scanRequest, callback)
 }
 
-type TestParams = {
-	viewText?: string
-	recognizeTypes?: string
-	hideAlbum: boolean
-	openTorchText?: string
-	closeTorchText?: string
-	onScanFinish?: (type:string, text:string) => boolean
-	onScanCancel?: () => void
-	onScanError?: (err:string) => void
+class MyScanCallback extends ScanCallback {
+	params: ScanParams
+
+	constructor(params: ScanParams) {
+		super()
+		this.params = params
+	}
+
+	override onScanResult(isProcessed: boolean, result?: Intent) {
+		console.log('isProcessed:', isProcessed)
+		console.log('result:', result)
+		if (!isProcessed || result == null) {
+			this.params.onScanResult?.('')
+			return
+		}
+		let data = result.getDataString()
+		console.log('data:', data)
+		this.params.onScanResult?.(data as any)
+	}
 }
 
-export function doTest(params: TestParams) {
+export function startScan(params: ScanParams) {
+	let scanRequest = new ScanRequest()
+
+	if (params.viewText != null) scanRequest.setViewText(params.viewText)
+
+	if (params.recognizeTypes != null) {
+		const args = parseRecognizeTypes(params.recognizeTypes)
+
+		// 设法调用具有可变参数的原生接口
+		switch (args.length) {
+		case 1:
+			scanRequest.setRecognizeType(args[0])
+		case 2:
+			scanRequest.setRecognizeType(args[0], args[1])
+		case 3:
+			scanRequest.setRecognizeType(args[0], args[1], args[2])
+		case 4:
+			scanRequest.setRecognizeType(args[0], args[1], args[2], args[3])
+		}
+	}
+
+	// if (params.hideAlbum != null)
+	scanRequest.setNotSupportAlbum(params.hideAlbum)
+
+	if (params.openTorchText != null) scanRequest.setOpenTorchText(params.openTorchText)
+
+	if (params.closeTorchText != null) scanRequest.setCloseTorchText(params.closeTorchText)
+
+	if (params.scanType != null) {
+		if (params.scanType == 'QRCODE') {
+			scanRequest.setScanType(ScanRequest.ScanType.QRCODE)
+		}
+		if (params.scanType == 'BARCODE') {
+			scanRequest.setScanType(ScanRequest.ScanType.BARCODE)
+		}
+	}
+
+	if (params.titleText != null) scanRequest.setTitleText(params.titleText)
+
+	// if (params.translucentStatusBar != null)
+	scanRequest.setTranslucentStatusBar(params.translucentStatusBar)
+
+	let callback = new MyScanCallback(params)
+	MPScan.startMPaasScanActivity(getUniActivity(), scanRequest, callback)
+}
+
+export function doTest(params: ScanParams) {
 	console.log('doTest:params:', params)
 	console.log('doTest:params.viewText', params.viewText)
 	console.log('doTest:params.recognizeTypes', params.recognizeTypes)
@@ -138,16 +209,8 @@ export function doTest(params: TestParams) {
 	console.log('doTest:params.onScanError', params.onScanError)
 
 	if (params.recognizeTypes != null) {
-		let types = params.recognizeTypes
-			?.replace(/[^A-Z_]/, ',')
-			?.split(',')
-			?.filter((str:string):boolean => {
-				return recognizeTypeNames.indexOf(str) >= 0
-			})
-			?.map((str:string):ScanRequest.RecognizeType => {
-				return recognizeTypeValues[recognizeTypeNames.indexOf(str)]
-			})
-		console.log('types:', types, types?.length)
+		const types = parseRecognizeTypes(params.recognizeTypes)
+		console.log('types:', types, types.length)
 	}
 
 	let ret = params.onScanFinish?.('type', 'text')

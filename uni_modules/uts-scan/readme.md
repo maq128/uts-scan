@@ -1,3 +1,6 @@
+# 项目说明
+
+把mPaaS的扫码组件包装为UTS插件。
 
 # 已知问题
 
@@ -22,7 +25,7 @@ Error: targetMethod error::java.lang.IllegalArgumentException: Callable expects 
 从前端 js 侧调用 UTS 插件 API 的时候传入一个 callback 函数，从 UTS 侧调用这个 callback 的时候无法获取其返回值，
 得到的返回值总是一个 `kotlin.Unit`。
 
-- 如何创建一个具有指定类型的空数组？
+- 如何给回调函数传入一个 null 值？
 
 - UTS 如何调用具有可变参数的原生接口？
 
