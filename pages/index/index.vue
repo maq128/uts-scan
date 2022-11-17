@@ -48,7 +48,6 @@
 			onScan() {
 				this.title = `[${new Date().toLocaleTimeString().substr(0,8)}] 开始窗口扫码……`
 
-				// UTSScan.doTest({
 				UTSScan.startScan({
 					viewText: '扫二维码/条码',
 					// recognizeTypes: ['QR_CODE','BAR_CODE'], // QR_CODE / BAR_CODE / DM_CODE / PDF417_CODE
@@ -66,6 +65,8 @@
 			},
 			onTest() {
 				this.title = `[${new Date().toLocaleTimeString().substr(0,8)}] 开始测试……`
+
+				UTSScan.doTest()
 
 				UTSScan.doTest({
 					viewText: '扫二维码',

@@ -197,22 +197,23 @@ export function startScan(params: ScanParams) {
 	MPScan.startMPaasScanActivity(getUniActivity(), scanRequest, callback)
 }
 
-export function doTest(params: ScanParams) {
+// 从 HX3.6.9-alpha 开始支持可选参数
+export function doTest(params?: ScanParams) {
 	console.log('doTest:params:', params)
-	console.log('doTest:params.viewText', params.viewText)
-	console.log('doTest:params.recognizeTypes', params.recognizeTypes)
-	console.log('doTest:params.hideAlbum', params.hideAlbum)
-	console.log('doTest:params.openTorchText', params.openTorchText)
-	console.log('doTest:params.closeTorchText', params.closeTorchText)
-	console.log('doTest:params.onScanFinish', params.onScanFinish)
-	console.log('doTest:params.onScanCancel', params.onScanCancel)
-	console.log('doTest:params.onScanError', params.onScanError)
+	console.log('doTest:params.viewText', params?.viewText)
+	console.log('doTest:params.recognizeTypes', params?.recognizeTypes)
+	console.log('doTest:params.hideAlbum', params?.hideAlbum)
+	console.log('doTest:params.openTorchText', params?.openTorchText)
+	console.log('doTest:params.closeTorchText', params?.closeTorchText)
+	console.log('doTest:params.onScanFinish', params?.onScanFinish)
+	console.log('doTest:params.onScanCancel', params?.onScanCancel)
+	console.log('doTest:params.onScanError', params?.onScanError)
 
-	if (params.recognizeTypes != null) {
+	if (params?.recognizeTypes != null) {
 		const types = parseRecognizeTypes(params.recognizeTypes)
 		console.log('types:', types, types.length)
 	}
 
-	let ret = params.onScanFinish?.('type', 'text')
+	let ret = params?.onScanFinish?.('type', 'text')
 	console.log('onScanFinish():', ret)
 }
